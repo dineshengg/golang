@@ -1,0 +1,41 @@
+
+<head>
+  <link href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.css" rel="stylesheet">
+ 
+  <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+  <script src="https://cdn.datatables.net/2.1.8/js/dataTables.js"></script>
+</head>
+<body>
+    
+<h1>{{.Title}} </h1>
+<table id="news" class="display nowrap">
+  <thead>
+    <th style="width:60 !important">Index</th>
+    <th>Title</th>
+    <th>Description</th>
+    <th>Category</th>
+    <th>Source </th>
+    <th>PublishDate</th>
+  </thead>
+  {{$id := 0}}
+  <tbody>  
+  {{range $index, $element := .NewsList}}
+    <tr>
+      <td>{{$id}}</td>
+      <td><a href="{{$element.Link}}" target="_blank"> {{$element.Title}}</a></td>
+      <td>{{$element.Description}}</td>
+      <td>{{$element.Category}}</td>
+      <td>{{$element.Source}} </td>
+      <td>{{$element.PublishDate}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+  
+</table>
+</body>
+
+<script> 
+$(document).ready(function(){
+  $('#news').DataTable()
+});
+</script>
