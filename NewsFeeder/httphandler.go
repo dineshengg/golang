@@ -142,7 +142,10 @@ func get_news(wg *sync.WaitGroup, ch chan NewsInfo, url string){
 
 		newsinfo := NewsInfo{n.Title, n.Description, n.Category, url, n.Link, n.PublishDate, "False", "False", " "}
 		for _, c := range newsfeeder.Companies{
-			if strings.Contains(n.Title, c.Name) || strings.Contains(n.Description, c.Name){
+			l_title := strings.ToLower(n.Title)
+			l_name := strings.ToLower(c.Name)
+			l_desc := strings.ToLower(n.Description)
+			if strings.Contains(l_title, l_name) || strings.Contains(l_desc, l_name){
 				newsinfo.Tracked = fmt.Sprintf("** - %s", c.Category)
 				newsinfo.Logic = fmt.Sprintf("** - %s", c.Logic)								
 				break

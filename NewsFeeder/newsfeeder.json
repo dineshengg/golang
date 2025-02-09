@@ -31,9 +31,34 @@
 				"logic": "Has given very good q3 profit and going higher previous purchase price 2146"
 			},
 			{
-				"name": "CDSL",
+				"name": "KPI Green",
 				"category": "government",
-				"logic": "When market goes high it will also go high based on new transactions"
+				"logic": "Going high due to green energy policy of government"
+			},
+			{
+				"name": "Premier Energies",
+				"category": "government",
+				"logic": "profit increasing very well, drop plan of solar plant in us"
+			},
+			{
+				"name": "Dilip Buildcon",
+				"category": "EPC, government",
+				"logic": "profit increasing, opm 20%, debt is 18k increasing, promoter same, fii and dii increased, smallrun up there"
+			},
+			{
+				"name": "Welspun",
+				"category": "renewable energy, government",
+				"logic": "profit increasing, opm 15%, debt is 5k increasing, promoter increasing 54%, fii and dii increased, smallrun up there, already near 52week high"
+			},
+			{
+				"name": "Welspun Corp",
+				"category": "oil and gas",
+				"logic": "profit increasing, opm 12%, debt is 12k increasing, promoter increasing 50%, fii and dii increased by 11 to 20 %, smallrun up there, already near 52week high"
+			},
+			{
+				"name": "Kaynes technology",
+				"category": "integrated electronics for defence, railways, space, iot",
+				"logic": "opm 15% increasing qoq, eps 10.38 rs, pe is 106 high, recently corrected due to deepseek, support 3900,ev vehicle parts"
 			}
 		],
 		"keywords":
