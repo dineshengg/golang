@@ -1,41 +1,181 @@
-
+<!DOCTYPE html>
 <head>
+  <meta charset="UTF-8">
   <link href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.css" rel="stylesheet">
- 
+  
   <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
   <script src="https://cdn.datatables.net/2.1.8/js/dataTables.js"></script>
+  <style>
+    
+  
+
+    
+
+  </style>
 </head>
 <body>
     
 <h1>{{.Title}} </h1>
-<table id="news" class="display nowrap">
+
+
+  <input type="checkbox" id="Important" name="Important" value="Important" onclick="Important()">
+  <label for="Important"> Important</label><br>
+  <input type="checkbox" id="Tracked" name="Tracked" value="Tracked" onclick="Tracked()">
+  <label for="Tracked"> Tracked</label><br>
+
+
+<table cellpadding="0" cellspacing="0" border="0" id="news" class="display datatable">
   <thead>
-    <th style="width:60 !important">Index</th>
-    <th>Title</th>
-    <th>Description</th>
-    <th>Category</th>
-    <th>Source </th>
-    <th>PublishDate</th>
+    <tr>
+      <th class="small-column">Index</th>
+      <th data="title" style="width:60%">Title</th>
+      <th data="desc" style="width:40%">Description</th>
+      <th >Category</th>
+      <th >Source </th>
+      <th >PublishDate</th>
+      <th >Important</th>
+      <th >Category</th>
+      <th >Logic</th>
+    </tr>
   </thead>
-  {{$id := 0}}
-  <tbody>  
+  
+  <tbody>
+  {{$i := 1}}
   {{range $index, $element := .NewsList}}
     <tr>
-      <td>{{$id}}</td>
-      <td><a href="{{$element.Link}}" target="_blank"> {{$element.Title}}</a></td>
-      <td>{{$element.Description}}</td>
+      <td>{{$i}}</td>
+      <td class="big-column" style="width:40%"><a href="{{$element.Link}}" target="_blank"> {{$element.Title}}</a></td>
+      <td class="big-column" style="width:40%">{{$element.Description}}</td>
       <td>{{$element.Category}}</td>
-      <td>{{$element.Source}} </td>
+      <td><a href="{{$element.Source}}" target="_blank"> {{$element.Source}}</a></td>
       <td>{{$element.PublishDate}}</td>
-  </tr>
+      <td>{{$element.Important}}</td>
+      <td>{{$element.Tracked}}</td>
+      <td>{{$element.Logic}}</td>
+    </tr>
+  {{end}}
+  </tbody>  
+</table>
+</br>
+</br>
+
+<h1>List of stock news urls</h1>
+<table id="urls" class="display nowrap">
+  <thead>
+    <th>urls</th>
+    <th>message</th>
+  </thead>
+  <tbody>  
+  {{range $index, $message := .Urls}}
+    <tr>
+      <td><a href="{{$index}}" target="_blank"> {{$index}}</a></td>
+      <td>{{$message}}</td>
+    </tr>
   {{end}}
   </tbody>
-  
 </table>
 </body>
 
 <script> 
 $(document).ready(function(){
-  $('#news').DataTable()
+  let options = {
+    order: [[5, 'asc']],
+    columns: [
+      { width: "6%"}, 
+      {width:"30px"},
+      { width: "30%"}, { width: "10%"}, null, null, null, { width: "10%"}, { width: "10%"}
+    ],
+    columnDefs:[
+      {
+        target:[2],
+        data: "title",
+        render: function (data, type, row, meta){
+            if (data.length > 300)
+            {
+              return '<a href ="'+ data + '"> description</a>';
+            }
+            else
+            {
+              return data
+            }
+          }
+      },
+      {
+        target: 5,
+        type: "date"
+      }
+    ]
+    
+};
+  $('#news').DataTable(options)
+  
 });
+
+function Important(){
+  var checkBox, table, tr, td, txtValue;
+  checkBox = document.getElementById("Important");
+  if(checkBox.checked == true){
+
+    table = document.getElementById("news");
+    tr = table.getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+      td = tr[i].getElementsByTagName("td")[6];
+      if(td){        
+        txtValue = td.textContent || td.innerText;
+        if (txtValue.toUpperCase() == "FALSE") {
+          tr[i].style.display = "none";
+        }
+        else{
+          tr[i].style.display = "";
+        }
+      }
+    }
+  }
+  else{
+    table = document.getElementById("news");
+    tr = table.getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+      td = tr[i].getElementsByTagName("td")[7];
+      if(td){
+        tr[i].style.display = "";
+      }
+    }
+
+  }
+}
+
+function Tracked(){
+  var checkBox, table, tr, td, txtValue;
+  checkBox = document.getElementById("Tracked");
+  if(checkBox.checked == true){
+
+    table = document.getElementById("news");
+    tr = table.getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+      td = tr[i].getElementsByTagName("td")[7];
+      if(td){        
+        txtValue = td.textContent || td.innerText;
+        if (txtValue.toUpperCase() == "FALSE") {
+          tr[i].style.display = "none";
+        }
+        else{
+          tr[i].style.display = "";
+        }
+      }
+    }
+  }
+  else{
+    table = document.getElementById("news");
+    tr = table.getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+      td = tr[i].getElementsByTagName("td")[7];
+      if(td){
+        tr[i].style.display = "";
+      }
+    }
+
+  }
+}
+
+
 </script>

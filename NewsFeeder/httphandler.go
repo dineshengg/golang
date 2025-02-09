@@ -10,12 +10,46 @@ import (
 	"strings"
 	"html/template"
 	"crypto/sha256"
-// 	"database/sql"
-// 	"github.com/uptrace/bun"
-// 	"github.com/uptrace/bun/extra/bundebug"
-// 	"github.com/uptrace/bun/dialect/pgdialect"
-// 	"github.com/uptrace/bun/driver/pgdriver"
+	"encoding/json"
+	"errors"
+	"os"
 )
+
+
+
+var news map[string] NewsInfo = make(map[string] NewsInfo)
+var newsfeeder *Newsfeeder = nil
+var urls_list map[string] string = make(map[string]string)
+
+func index_handler(w http.ResponseWriter, r *http.Request) {
+	html := "<h1> News aggregator for stocks market magazines </h1>"
+	fmt.Fprintf(w, html)
+}
+
+func newsaggregator(w http.ResponseWriter, r *http.Request){
+	data := struct {
+		Title string
+		NewsList map[string] NewsInfo
+		Urls map[string] string
+	}{
+		Title : "News aggregator", 
+		NewsList : news,
+		Urls: urls_list,
+	}
+
+	// funcmap := template.FuncMap{
+	// 	"add": func(a, b int) int {
+	// 		return a+b
+	// 	},
+	// }
+	//fmt.Println(news)
+	//funcmap := template
+	html, _ := template.ParseFiles("newsfeeder.html")
+	//html = html.Funcs(funcmap)
+	fmt.Println(html.Execute(w, data))
+}
+
+//xml data structure to parse and get the xml feed
 
 type Sitemapindex struct{
 	Locations string `xml:"channel>link"`
@@ -30,6 +64,8 @@ type NewsData struct{
 	PublishDate string `xml:"pubDate"`
 }
 
+//data for news filling
+
 type NewsInfo struct{
 	Title string 
 	Description string
@@ -37,30 +73,10 @@ type NewsInfo struct{
 	Source string
 	Link string
 	PublishDate string
-	Important bool
+	Important string
+	Tracked string
+	Logic string
 }
-
-var news map[string] NewsInfo = make(map[string] NewsInfo)
-
-func index_handler(w http.ResponseWriter, r *http.Request) {
-	html := "<h1> News aggregator for stocks market magazines </h1>"
-	fmt.Fprintf(w, html)
-}
-
-func newsaggregator(w http.ResponseWriter, r *http.Request){
-	data := struct {
-		Title string
-		NewsList map[string] NewsInfo
-	}{
-		Title : "News aggregator", 
-		NewsList : news,
-	}
-	fmt.Println(news)
-	//funcmap := template
-	html, _ := template.ParseFiles("newsfeeder.html")
-	fmt.Println(html.Execute(w, data))
-}
-
 
 func (n NewsInfo) String() string {
 	fmt.Printf("Title - %s\n", n.Title)
@@ -72,68 +88,29 @@ func (n NewsInfo) String() string {
 	return fmt.Sprintf("----------------------------------------------------------------\n")
 }
 
-func IsImportantNews(title, description string) bool {
+func IsImportantNews(title, description string) (bool, string) {
 	//get the keywords from db to see any important keywords present in title or descriptions
-	Keywords := [] string {"bank", "government", "order", "bags", "contract", "worth"}
-	for _, k := range Keywords{
+	for _, k := range newsfeeder.Keywords{
 		if strings.Contains(title, k) || strings.Contains(description, k){
-			return true
+			return true, k
 		}
 	}
-	return false
+	
+	return false, "False"
 }
-
-
-//New feed url list data structure
-// type NewsUrl struct{
-// 	bun.BaseModel `bun:"table:users,alias:u"`
-
-// 	ID int64 `bun:",pk,autoincrement"`
-// 	URL string
-// }
-
-//var dsn string = "postgres://postgre:admin@NewsFeeds/var/run/postgresql/.s.PGSQL.5432"
-
-// func (p *NewsUrl) database_createtable(db *DB) int{
-// 	res, err := db.NewCreateTable().Model(&NewsUrl).Exec(ctx)
-// 	if err != nil{
-// 		fmt.Println("Unable to create table for NewsUrl")
-// 		return -1
-// 	}
-    
-//     //captures query errors in stdout
-// 	db.AddQueryHook(bundebug.NewQueryHook(
-// 	bundebug.WithVerbose(true),
-// 	bundebug.FromEnv("BUNDEBUG"),
-// ))
-// }
-
-// func (p * NewsUrl) query_newsurls(db *DB) [] NewsUrl{
-// 	newsurls = [] NewsUrl
-// 	err := db.NewSelect().Model(&newsurls).Scan(ctx)
-// 	if err != nil{
-// 		fmt.Println("Unable to create table for NewsUrl")
-// 		return nil
-// 	}
-// 	return newsurls
-// }
 
 
 func get_news(wg *sync.WaitGroup, ch chan NewsInfo, url string){
 	defer wg.Done()
-	fmt.Println("info 1")
-	//resp, err:= http.Get(url)
-	fmt.Println("info 2")
-	// if err != nil{
-	// 	fmt.Printf("Not able to get RSS feed - %s", err)
-	// 	return
-	// }
-
+	
 	client := &http.Client{}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil{
 		fmt.Println("Error occoured while creating new request for url ", url)
+		var message string
+		fmt.Sprintf(message, err)
+		urls_list[url] = message
 		return
 	}
 
@@ -148,54 +125,112 @@ func get_news(wg *sync.WaitGroup, ch chan NewsInfo, url string){
 	data = bytes.Trim(data, `" `)
 	var s Sitemapindex
 	xml.Unmarshal(data, &s)
-	fmt.Println("info 4")
+	//fmt.Println(url, "info 4")
 	//fmt.Println(s)
 	resp.Body.Close()
 
 	if len(s.News) == 0{
+		var message string
+		message = fmt.Sprintf("no message retrieved from this url - %s", url)
+		urls_list[url] = message
 		fmt.Println("No news info got from this url  - ", url)
 		return
 	}
 
 	for _, n := range s.News{
-		newsinfo := NewsInfo{n.Title, n.Description, n.Category, url, n.Link, n.PublishDate, false}
-		//fmt.Println(newsinfo)
-		//newsinfo.Important = IsImportantNews(n.Title, n.Description)
+		
+
+		newsinfo := NewsInfo{n.Title, n.Description, n.Category, url, n.Link, n.PublishDate, "False", "False", " "}
+		for _, c := range newsfeeder.Companies{
+			if strings.Contains(n.Title, c.Name) || strings.Contains(n.Description, c.Name){
+				newsinfo.Tracked = fmt.Sprintf("** - %s", c.Category)
+				newsinfo.Logic = fmt.Sprintf("** - %s", c.Logic)								
+				break
+			}
+		}
+
+		var important string
+		var ok bool
+		
+		if ok, important = IsImportantNews(n.Title, n.Description); ok == true {
+			newsinfo.Important = fmt.Sprintf("** - %s", important)
+		} else{
+			newsinfo.Important = important
+		}		
+
 		ch <- newsinfo
 	}
-	
-	fmt.Println("info 5")
-	
+	urls_list[url] = "successfully retrieved all the news"
 }
 
+type Config struct{
+	 Newsfeed Newsfeeder `json:"newsfeeder"`
+}
+
+type Newsfeeder struct{
+	Urls [] string `json:"urls"`
+	Companies [] Company `json:"companies"`
+	Keywords [] string `json:"keywords"`
+}
+
+type Company struct{
+	Name string `json:"name"`
+	Category string `json:"category"`
+	Logic string `json:"logic"`
+}
+
+func ParseJSONConfig() (*Newsfeeder, error){
+	//fmt.Println("ParseJSONconfig function 1")
+	jsonfile, err := os.Open("newsfeeder.json")
+	if err != nil{
+		fmt.Println("error reading file")
+		error := fmt.Sprintf("Failed to open newsfeeder JSON file %W", err)
+		fmt.Println(error, err)
+		return nil, errors.New(error)
+	}
+	//fmt.Println("ParseJSONconfig function 1")
+
+	defer jsonfile.Close()
+
+	bytevalue, err:= ioutil.ReadAll(jsonfile)
+	if err != nil{
+		fmt.Println("reading JSON file failed with error ", err)
+		return nil, errors.New("reading JSON file failed with error ")
+	}
+
+	//fmt.Println(bytevalue)
+	var config Config
+	error_mar := json.Unmarshal(bytevalue, &config)
+	if error_mar !=nil{
+		fmt.Println("unmarshal error", error_mar.Error())
+	}
+	//fmt.Println(config)
+	importantnews := config.Newsfeed
+	return &importantnews, nil
+}
 
 
 func main() {
 
-	// var newsurl NewsUrl
-	// sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-	// db := bun.NewDB(sqldb, pgdialect.New())
-	// newsurl.database_createtable(&db)
-	// newsurls := newsurl.query_newsurls(&db)
+	
 
 	//Get all the news feeds and store in map key title and value NewsInfo struct
 	var wg sync.WaitGroup
 
-	
+	config, err := ParseJSONConfig()
+	if err != nil{
+		fmt.Println(err)
+	}
+	newsfeeder = config
 
 	mmap := make(map[int] string)
-	mmap[0] = "https://www.thehindubusinessline.com/news/feeder/default.rss"
-	//mmap[1] = "https://www.business-standard.com/rss/markets-106.rss"
-	//Economic times
-	// mmap[2] = "https://cfo.economictimes.indiatimes.com/rss/economy"
-	// mmap[3] = "https://cfo.economictimes.indiatimes.com/rss/corporate-finance"
-	// mmap[4] = "https://cfo.economictimes.indiatimes.com/rss/topstories"
-	// mmap[5] = "https://cfo.economictimes.indiatimes.com/rss/policy"
-	// mmap[6] = "https://cfo.economictimes.indiatimes.com/rss/governance-risk-compliance"
-	// mmap[7] = "https://cfo.economictimes.indiatimes.com/rss/lateststories"
-	// mmap[8] = "https://www.livemint.com/rss/markets"
-	// mmap[9] = "https://www.livemint.com/rss/companies"
-	// mmap[10] = "https://www.livemint.com/rss/industry"
+
+	fmt.Println("getting stock news from urls listed below")
+	for index, url := range newsfeeder.Urls{
+		fmt.Println(url)
+		mmap[index] = url
+	}
+
 	ch := make(chan NewsInfo, 50)
 
 	for _, url := range mmap{
@@ -206,10 +241,10 @@ func main() {
 	go func(){
 		wg.Wait()
 		close(ch)
-		fmt.Println("closed channel")
+		fmt.Println("channel closed")
 	}()
 
-    fmt.Println("info 6")
+    //fmt.Println("info 6")
 	for n := range ch{
 		//fmt.Printf("%T\n", n)
 		//store in db
@@ -218,10 +253,11 @@ func main() {
 		//fmt.Println("getting news", n)
 		//fmt.Printf("getting data %T, %s", news, string(id.Sum(nil)))
 		news[string(id.Sum(nil))] = n
+		//fmt.Println(n)
 	}
 
-	fmt.Println(news)
-	fmt.Println("info 7")
+	//fmt.Println(news)
+	//fmt.Println("info 7")
 
 	http.HandleFunc("/", index_handler)
 	http.HandleFunc("/stocks", newsaggregator)
